@@ -35,19 +35,29 @@ const Dashboard = () => {
     },
   ];
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Logout Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      localStorage.removeItem("userRole");
-      navigate("/");
+const handleLogout = async () => {
+  try {
+    const { data } = await supabase.auth.getSession();
+
+    if (data.session) {
+      await supabase.auth.signOut();
     }
-  };
+  } catch (error) {
+    console.warn("Logout warning:", error);
+  } finally {
+
+    localStorage.clear();
+    sessionStorage.clear();
+
+    toast({
+      title: "Logged out",
+      description: "Session ended successfully",
+    });
+
+    window.location.href = "/";
+  }
+};
+
 
   return (
     <BackgroundLayout>
