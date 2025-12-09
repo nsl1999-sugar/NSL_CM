@@ -205,10 +205,12 @@ const SalesReport = () => {
         }
       });
 
-      // Apply borders to all table cells (headers + data + totals)
-      applyBorderToRange(headerRowIndex, sheetData.length - 1, 0, headerRow.length - 1);
-      // Center-align header and all table body cells for a consistent tabular look
+      // Apply borders to titles as well so every cell is boxed
+      applyBorderToRange(0, sheetData.length - 1, 0, headerRow.length - 1);
+
+      // Center-align header and data cells
       applyAlignmentToRange(headerRowIndex + 1, sheetData.length - 1, 0, headerRow.length - 1, alignCenter);
+
       // Emphasize total row
       const totalRowIndex = sheetData.length - 1;
       headerRow.forEach((_, colIndex) => {
