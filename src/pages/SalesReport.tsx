@@ -64,11 +64,11 @@ const SalesReport = () => {
 
       // Query sales_table by date range
       const { data: salesData, error } = await supabase
-        .from('sales_table')
-        .select('*')
-        .gte('sale_date', fromDateTime.toISOString())
-        .lte('sale_date', toDateTime.toISOString())
-        .order('sale_date', { ascending: true });
+        .from("sales_table")
+        .select("division, section, coupon_no, ryot_number, ryot_name, village, cane_wt, sugar_qty, sugar_rate, amount, sale_date")
+        .gte("sale_date", fromDateTime.toISOString())
+        .lte("sale_date", toDateTime.toISOString())
+        .order("sale_date", { ascending: true });
 
       if (error) {
         throw error;
@@ -84,60 +84,118 @@ const SalesReport = () => {
         return;
       }
 
-/* ---------- FACTORY FORMAT EXCEL ---------- */
+      /* ---------- STRUCTURED EXCEL OUTPUT ---------- */
 
-const headerRow = [
-  "Division",
-  "Section",
-  "Coupon No",
-  "Ryot Number",
-  "Ryot Name",
-  "Village",
-  "Cane Wt",
-  "Eligible Qty",
-  "Sugar Rate (Per KG)",
-  "Amt In Rs"
-];
+      const headerRow = [
+        "Division",
+        "Section",
+        "Coupon No",
+        "Ryot Number",
+        "Ryot Name",
+        "Village",
+        "Cane Wt",
+        "Eligible Qty",
+        "Sugar Rate (Per KG)",
+        "Amt In Rs",
+      ];
 
-const dataRows = salesData.map((r: any) => [
-  r.division,
-  r.section,
-  r.coupon_no,
-  r.ryot_number,
-  r.ryot_name,
-  r.village,
-  r.cane_wt,
-  r.sugar_qty,
-  r.sugar_rate,
-  r.amount
-]);
+      const dataRows = salesData.map((r: any) => [
+        r.division,
+        r.section,
+        r.coupon_no,
+        r.ryot_number,
+        r.ryot_name,
+        r.village,
+        r.cane_wt,
+        r.sugar_qty,
+        r.sugar_rate,
+        r.amount,
+      ]);
 
-const totalCane = salesData.reduce((s:any,r:any)=>s+(r.cane_wt||0),0);
-const totalQty  = salesData.reduce((s:any,r:any)=>s+(r.sugar_qty||0),0);
-const totalAmt  = salesData.reduce((s:any,r:any)=>s+(r.amount||0),0);
+      const totalCane = salesData.reduce((s: number, r: any) => s + (r.cane_wt || 0), 0);
+      const totalQty = salesData.reduce((s: number, r: any) => s + (r.sugar_qty || 0), 0);
+      const totalAmt = salesData.reduce((s: number, r: any) => s + (r.amount || 0), 0);
 
-dataRows.push([
-  "TOTAL","","","","","",
-  totalCane,totalQty,"",totalAmt
-]);
+      const sheetData = [
+        ["NSL SUGARS LTD., KOPPA UNIT"],
+        ["Ryot Sugar Coupon Statement for Crushing Season -2425M"],
+        [],
+        headerRow,
+        ...dataRows,
+        ["TOTAL", "", "", "", "", "", totalCane, totalQty, "", totalAmt],
+      ];
 
-const sheetData = [
-  ["NSL SUGARS LTD., KOPPA UNIT"],
-  ["Ryot Sugar Coupon Statement for Crushing Season -2425M"],
-  [],
-  headerRow,
-  ...dataRows
-];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
 
-const ws = XLSX.utils.aoa_to_sheet(sheetData);
-const wb = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
+      ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headerRow.length - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: headerRow.length - 1 } },
+      ];
 
-ws["!cols"] = [
-  { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 },
-  { wch: 20 }, { wch: 18 }, { wch: 12 },
-  { wch: 12 }, { wch: 16 }, { wch: 12 }
-];
+      ws["!cols"] = [
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 14 },
+        { wch: 20 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 16 },
+        { wch: 12 },
+      ];
+
+      const thinBorder = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      const applyBorderToRange = (startRow: number, endRow: number, startCol: number, endCol: number) => {
+        for (let r = startRow; r <= endRow; r++) {
+          for (let c = startCol; c <= endCol; c++) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            const cell = ws[cellRef] || { t: "s", v: "" };
+            cell.s = { ...(cell.s || {}), border: thinBorder };
+            ws[cellRef] = cell;
+          }
+        }
+      };
+
+      // Apply center alignment for titles and headers
+      const alignCenter = { vertical: "center", horizontal: "center" as const };
+      const titleRows = [0, 1];
+      titleRows.forEach((rowIndex) => {
+        const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+        const cell = ws[cellRef];
+        if (cell) {
+          cell.s = {
+            ...(cell.s || {}),
+            alignment: alignCenter,
+            font: { bold: true },
+          };
+        }
+      });
+
+      const headerRowIndex = 3;
+      headerRow.forEach((_, colIndex) => {
+        const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: colIndex });
+        const cell = ws[cellRef];
+        if (cell) {
+          cell.s = {
+            ...(cell.s || {}),
+            alignment: alignCenter,
+            font: { bold: true },
+            border: thinBorder,
+          };
+        }
+      });
+
+      // Apply borders to all table cells (headers + data + totals)
+      applyBorderToRange(headerRowIndex, sheetData.length - 1, 0, headerRow.length - 1);
 
 
       // Generate filename with date range
