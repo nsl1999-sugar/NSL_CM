@@ -120,7 +120,7 @@ const SalesReport = () => {
 
       const sheetData = [
         ["NSL SUGARS LTD., KOPPA UNIT"],
-        ["Ryot Sugar Coupon Statement for Crushing Season -2425M"],
+        ["Ryot Sugar Coupon Statement for Crushing Season "],
         [],
         headerRow,
         ...dataRows,
