@@ -165,6 +165,17 @@ const SalesReport = () => {
         }
       };
 
+      const applyAlignmentToRange = (startRow: number, endRow: number, startCol: number, endCol: number, alignment: XLSX.CellStyle["alignment"]) => {
+        for (let r = startRow; r <= endRow; r++) {
+          for (let c = startCol; c <= endCol; c++) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            const cell = ws[cellRef] || { t: "s", v: "" };
+            cell.s = { ...(cell.s || {}), alignment };
+            ws[cellRef] = cell;
+          }
+        }
+      };
+
       // Apply center alignment for titles and headers
       const alignCenter = { vertical: "center", horizontal: "center" as const };
       const titleRows = [0, 1];
@@ -196,6 +207,22 @@ const SalesReport = () => {
 
       // Apply borders to all table cells (headers + data + totals)
       applyBorderToRange(headerRowIndex, sheetData.length - 1, 0, headerRow.length - 1);
+      // Center-align header and all table body cells for a consistent tabular look
+      applyAlignmentToRange(headerRowIndex + 1, sheetData.length - 1, 0, headerRow.length - 1, alignCenter);
+      // Emphasize total row
+      const totalRowIndex = sheetData.length - 1;
+      headerRow.forEach((_, colIndex) => {
+        const cellRef = XLSX.utils.encode_cell({ r: totalRowIndex, c: colIndex });
+        const cell = ws[cellRef];
+        if (cell) {
+          cell.s = {
+            ...(cell.s || {}),
+            font: { ...(cell.s?.font || {}), bold: true },
+            alignment: alignCenter,
+            border: thinBorder,
+          };
+        }
+      });
 
 
       // Generate filename with date range

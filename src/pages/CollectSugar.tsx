@@ -245,7 +245,7 @@ const CollectSugar = () => {
         sugar_rate: entry.sugarRate,
         amount: entry.amount,
         payment_mode: paymentMethod,
-        collected_by: session.user?.email ?? null,
+        collected_by: session.user.email,
       }));
 
       const { error: insertError } = await supabase
