@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Calendar as CalendarIcon, Download, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Download } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +17,7 @@ import nslLogo from "@/assets/nsl-sugars-logo.png";
 const SalesReport = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [fromDate, setFromDate] = useState<Date>();
   const [toDate, setToDate] = useState<Date>();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -43,32 +44,16 @@ const SalesReport = () => {
       const to = new Date(toDate);
       to.setHours(23, 59, 59, 999);
 
-      /* ✅ JOIN SALES + FARMERS */
+      // ✅ SALES TABLE ONLY (CORRECT)
       const { data, error } = await supabase
         .from("sales_table")
-        .select(`
-          sale_date,
-          payment_mode,
-          collected_by,
-          sugar_qty,
-          sugar_rate,
-          amount,
-          farmers_table (
-            division,
-            section,
-            coupon_no,
-            ryot_number,
-            ryot_name,
-            father_name,
-            village,
-            cane_wt
-          )
-        `)
+        .select("*")
         .gte("sale_date", from.toISOString())
         .lte("sale_date", to.toISOString())
         .order("sale_date", { ascending: true });
 
       if (error) throw error;
+
       if (!data || data.length === 0) {
         toast({
           title: "No Data",
@@ -78,37 +63,37 @@ const SalesReport = () => {
         return;
       }
 
-      /* ✅ EXCEL ROWS */
+      // ✅ FORMAT EXACT FACTORY EXCEL
       const rows = data.map((r: any) => ({
-        Division: r.farmers_table.division,
-        Section: r.farmers_table.section,
-        "Coupon No": r.farmers_table.coupon_no,
-        "Ryot Number": r.farmers_table.ryot_number,
-        "Ryot Name": r.farmers_table.ryot_name,
-        "Father Name": r.farmers_table.father_name,
-        Village: r.farmers_table.village,
-        "Cane Wt": r.farmers_table.cane_wt,
+        Division: r.division,
+        Section: r.section,
+        "Coupon No": r.coupon_no,
+        "Ryot Number": r.ryot_number,
+        "Ryot Name": r.ryot_name,
+        "Father Name": r.father_name,
+        Village: r.village,
+        "Cane Wt": r.cane_wt,
         "Eligible Qty": r.sugar_qty,
-        "Sugar Rate": r.sugar_rate,
-        Amount: r.amount,
+        "Sugar Rate (Per KG)": r.sugar_rate,
+        "Amt In Rs": r.amount,
         "Collected By": r.collected_by,
         "Payment Mode": r.payment_mode,
         Date: format(new Date(r.sale_date), "dd/MM/yyyy HH:mm"),
       }));
 
-      /* ✅ TOTALS */
+      // ✅ TOTALS
       const totalCane = rows.reduce((s, r) => s + (r["Cane Wt"] || 0), 0);
       const totalQty = rows.reduce((s, r) => s + (r["Eligible Qty"] || 0), 0);
-      const totalAmt = rows.reduce((s, r) => s + (r.Amount || 0), 0);
+      const totalAmt = rows.reduce((s, r) => s + (r["Amt In Rs"] || 0), 0);
 
       rows.push({
         Division: "TOTAL",
         "Cane Wt": totalCane,
         "Eligible Qty": totalQty,
-        Amount: totalAmt,
+        "Amt In Rs": totalAmt,
       } as any);
 
-      /* ✅ CREATE SHEET */
+      // ✅ EXCEL STRUCTURE
       const sheet = XLSX.utils.json_to_sheet([], { skipHeader: true });
 
       XLSX.utils.sheet_add_aoa(sheet, [
@@ -135,7 +120,7 @@ const SalesReport = () => {
 
       toast({
         title: "Download Successful",
-        description: "Sales report generated",
+        description: "Sales report generated successfully",
       });
 
     } catch (err: any) {
@@ -162,7 +147,7 @@ const SalesReport = () => {
           </div>
         </GlassCard>
 
-        <GlassCard className="max-w-2xl mx-auto p-8">
+        <GlassCard className="max-w-2xl mx-auto p-8 space-y-4">
           <Label>From Date</Label>
           <Popover>
             <PopoverTrigger asChild>
@@ -176,7 +161,7 @@ const SalesReport = () => {
             </PopoverContent>
           </Popover>
 
-          <Label className="mt-4 block">To Date</Label>
+          <Label>To Date</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-full justify-start", !toDate && "text-muted-foreground")}>
@@ -189,7 +174,7 @@ const SalesReport = () => {
             </PopoverContent>
           </Popover>
 
-          <Button className="w-full mt-6" onClick={handleDownload} disabled={isDownloading}>
+          <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
             <Download className="h-4 w-4 mr-2" />
             Download Excel
           </Button>

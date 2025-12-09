@@ -227,13 +227,19 @@ const CollectSugar = () => {
       }
 
       const salesRecords = entriesToInsert.map((entry) => ({
-        coupon_no: entry.couponNo,
-        ryot_number: entry.ryotNo,
-        ryot_name: entry.name,
-        sugar_qty: entry.eligibleQty,
-        sugar_rate: entry.sugarRate,
-        amount: entry.amount,
-        payment_mode: paymentMethod,
+coupon_no: entry.couponNo,
+  ryot_number: entry.ryotNo,
+  ryot_name: entry.name,
+  father_name: entry.fatherName,
+  village: entry.village,
+  division: entry.division,
+  section: entry.section,
+  cane_wt: entry.caneWt,
+  eligible_qty: entry.eligibleQty,
+  sugar_rate: entry.sugarRate,
+  amount: entry.amount,
+  payment_mode: paymentMethod,
+  collected_by: session.user.email,
       }));
 
       const { error: insertError } = await supabase
