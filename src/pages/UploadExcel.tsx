@@ -195,12 +195,12 @@ const UploadExcel = () => {
 
     try {
       if (downloadBackup) {
-        const { data } = await supabase.from("farmers_table").select("*");
+        const { data } = await supabase.from("sales_table").select("*");
         if (data && data.length > 0) {
           const ws = XLSX.utils.json_to_sheet(data);
           const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "FarmersBackup");
-          XLSX.writeFile(wb, "farmers_backup.xlsx");
+          XLSX.utils.book_append_sheet(wb, ws, "SalesBackup");
+          XLSX.writeFile(wb, "sales_backup.xlsx");
         }
       }
 

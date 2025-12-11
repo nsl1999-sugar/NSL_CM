@@ -42,12 +42,33 @@ const formatSupabaseError = (message?: string) => {
     : message;
 };
 
+const formatDateDisplay = (value?: string | null) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+};
+
+const formatDateOnly = () => {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  // ISO-friendly date (no time); DB will store with zero time if column is timestamp/date
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 const CollectSugar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchValue, setSearchValue] = useState("");
   const [entries, setEntries] = useState<FarmerEntry[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr" | "partial">("cash");
+  const [partialCash, setPartialCash] = useState("");
+  const [partialQr, setPartialQr] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -94,41 +115,45 @@ const CollectSugar = () => {
         return;
       }
 
-      // Query farmer by ryot number first, then coupon number
-      const fetchFarmer = async () => {
-        const { data, error } = await supabase
+      // Query farmer by ryot number first (unique), then coupon number (guard duplicates)
+      const fetchFarmer = async (): Promise<{ farmer: any | null; duplicateCoupon: boolean }> => {
+        const { data: byRyot, error: ryotError } = await supabase
           .from("farmers_table")
           .select("*")
           .eq("ryot_number", lookupValue)
           .maybeSingle();
 
-        if (error) {
-          throw error;
+        if (ryotError && ryotError.code !== "PGRST116") {
+          throw ryotError;
+        }
+        if (byRyot) {
+          return { farmer: byRyot, duplicateCoupon: false };
         }
 
-        if (data) {
-          return data;
-        }
-
-        const { data: couponMatch, error: couponError } = await supabase
+        const byCoupon = await supabase
           .from("farmers_table")
           .select("*")
           .eq("coupon_no", lookupValue)
-          .maybeSingle();
+          .limit(2);
 
-        if (couponError) {
-          throw couponError;
+        if (byCoupon.error) {
+          throw byCoupon.error;
+        }
+        if (byCoupon.data && byCoupon.data.length > 1) {
+          return { farmer: null, duplicateCoupon: true };
         }
 
-        return couponMatch;
+        return { farmer: byCoupon.data?.[0] ?? null, duplicateCoupon: false };
       };
 
-      const farmer = await fetchFarmer();
+      const { farmer, duplicateCoupon } = await fetchFarmer();
 
       if (!farmer) {
         toast({
-          title: "Not Found",
-          description: "No farmer found with the provided coupon/ryot number.",
+          title: duplicateCoupon ? "Duplicate Coupon Number" : "Not Found",
+          description: duplicateCoupon
+            ? "Duplicate coupon number present. Please enter a unique Ryot Number instead."
+            : "No farmer found with the provided coupon/ryot number.",
           variant: "destructive",
         });
         setIsAdding(false);
@@ -138,7 +163,7 @@ const CollectSugar = () => {
       // Check if the farmer already collected sugar
       const { data: saleRecord, error: saleError } = await supabase
         .from("sales_table")
-        .select("id")
+        .select("id, sale_date")
         .eq("ryot_number", farmer.ryot_number)
         .maybeSingle();
 
@@ -169,7 +194,7 @@ const CollectSugar = () => {
       toast({
         title: saleRecord ? "Already Collected" : "Farmer Added",
         description: saleRecord
-          ? `${farmer.ryot_name} has already collected sugar.`
+          ? `Sugar was already collected on ${formatDateDisplay(saleRecord.sale_date)}.`
           : `${farmer.ryot_name} added to collection list.`,
         variant: saleRecord ? "destructive" : "default",
       });
@@ -187,6 +212,7 @@ const CollectSugar = () => {
 
   const handleConfirm = async () => {
     const newEntries = entries.filter((entry) => entry.status === "NEW");
+    const allowPartial = newEntries.length === 1;
 
     if (newEntries.length === 0) {
       toast({
@@ -233,20 +259,73 @@ const CollectSugar = () => {
         return;
       }
 
-      const salesRecords = entriesToInsert.map((entry) => ({
-        coupon_no: entry.couponNo,
-        ryot_number: entry.ryotNo,
-        ryot_name: entry.name,
-        division: entry.division,
-        section: entry.section,
-        village: entry.village,
-        cane_wt: entry.caneWt,
-        sugar_qty: entry.eligibleQty,
-        sugar_rate: entry.sugarRate,
-        amount: entry.amount,
-        payment_mode: paymentMethod,
-        collected_by: session.user.email,
-      }));
+      let cashAmount = 0;
+      let qrAmount = 0;
+
+      if (paymentMethod === "cash") {
+        // Per-row: put the row's amount in cash and zero in QR
+        cashAmount = 1;
+      } else if (paymentMethod === "qr") {
+        qrAmount = 1;
+      } else {
+        if (!allowPartial) {
+          toast({
+            title: "Partial not allowed",
+            description: "Partial payment can be used only when a single farmer is being billed.",
+            variant: "destructive",
+          });
+          setIsConfirming(false);
+          return;
+        }
+        const cashValue = parseFloat(partialCash || "0");
+        const qrValue = parseFloat(partialQr || "0");
+        const tolerance = 0.5; // allow small rounding differences
+        const diff = Math.abs(cashValue + qrValue - totalAmount);
+        const invalid =
+          Number.isNaN(cashValue) ||
+          Number.isNaN(qrValue) ||
+          cashValue < 0 ||
+          qrValue < 0 ||
+          diff > tolerance;
+
+        if (invalid) {
+          toast({
+            title: "Partial amounts do not match the total amount.",
+            description: `Total required: ₹${totalAmount.toFixed(2)} | Entered: ₹${cashValue.toFixed(
+              2
+            )} + ₹${qrValue.toFixed(2)}`,
+            variant: "destructive",
+          });
+          setIsConfirming(false);
+          return;
+        }
+        cashAmount = cashValue;
+        qrAmount = qrValue;
+      }
+
+      const salesRecords = entriesToInsert.map((entry) => {
+        // For cash/qr, use row amount per payment mode; for partial, use entered splits (single row only)
+        const cashForRow = paymentMethod === "partial" ? cashAmount : paymentMethod === "cash" ? entry.amount : 0;
+        const qrForRow = paymentMethod === "partial" ? qrAmount : paymentMethod === "qr" ? entry.amount : 0;
+
+        return {
+          coupon_no: entry.couponNo,
+          ryot_number: entry.ryotNo,
+          ryot_name: entry.name,
+          division: entry.division,
+          section: entry.section,
+          village: entry.village,
+          cane_wt: entry.caneWt,
+          sugar_qty: entry.eligibleQty,
+          sugar_rate: entry.sugarRate,
+          amount: entry.amount,
+          payment_mode: paymentMethod,
+          cash_amount: cashForRow,
+          qr_amount: qrForRow,
+          sale_date: formatDateOnly(),
+          collected_by: session.user.email,
+        };
+      });
 
       const { error: insertError } = await supabase
         .from("sales_table")
@@ -287,6 +366,11 @@ const CollectSugar = () => {
 
   const totalAmount = useMemo(
     () => entries.filter((entry) => entry.status === "NEW").reduce((sum, entry) => sum + entry.amount, 0),
+    [entries]
+  );
+
+  const allowPartial = useMemo(
+    () => entries.filter((entry) => entry.status === "NEW").length === 1,
     [entries]
   );
 
@@ -421,7 +505,22 @@ const CollectSugar = () => {
                 <Label className="mb-2 block">Payment Method</Label>
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(v) => setPaymentMethod(v as "cash" | "qr")}
+                  onValueChange={(v) => {
+                    const value = v as "cash" | "qr" | "partial";
+                    if (value === "partial" && !allowPartial) {
+                      toast({
+                        title: "Partial not allowed",
+                        description: "Partial payment can be used only when a single farmer is being billed.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setPaymentMethod(value);
+                    if (value !== "partial") {
+                      setPartialCash("");
+                      setPartialQr("");
+                    }
+                  }}
                   className="flex gap-4"
                 >
                   <div className="flex items-center space-x-2">
@@ -438,7 +537,39 @@ const CollectSugar = () => {
                       QR
                     </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="partial" id="partial" disabled={!allowPartial} />
+                    <Label htmlFor="partial" className="cursor-pointer flex items-center gap-1">
+                      Partial
+                    </Label>
+                  </div>
                 </RadioGroup>
+                {paymentMethod === "partial" && (
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="partialCash">Cash Amount</Label>
+                      <Input
+                        id="partialCash"
+                        type="number"
+                        min="0"
+                        value={partialCash}
+                        onChange={(e) => setPartialCash(e.target.value)}
+                        className="mt-1 bg-background/50"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="partialQr">QR Amount</Label>
+                      <Input
+                        id="partialQr"
+                        type="number"
+                        min="0"
+                        value={partialQr}
+                        onChange={(e) => setPartialQr(e.target.value)}
+                        className="mt-1 bg-background/50"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

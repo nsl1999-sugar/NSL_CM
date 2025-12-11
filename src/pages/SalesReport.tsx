@@ -65,7 +65,7 @@ const SalesReport = () => {
       // Query sales_table by date range
       const { data: salesData, error } = await supabase
         .from("sales_table")
-        .select("division, section, coupon_no, ryot_number, ryot_name, village, cane_wt, sugar_qty, sugar_rate, amount, collected_by, sale_date")
+        .select("division, section, coupon_no, ryot_number, ryot_name, village, cane_wt, sugar_qty, sugar_rate, amount, payment_mode, cash_amount, qr_amount, collected_by, sale_date")
         .gte("sale_date", fromDateTime.toISOString())
         .lte("sale_date", toDateTime.toISOString())
         .order("sale_date", { ascending: true });
@@ -97,6 +97,9 @@ const SalesReport = () => {
         "Eligible Qty",
         "Sugar Rate (Per KG)",
         "Amt In Rs",
+        "Payment Mode",
+        "Cash Amount",
+        "QR Amount",
         "Collected By",
       ];
 
@@ -111,6 +114,9 @@ const SalesReport = () => {
         r.sugar_qty,
         r.sugar_rate,
         r.amount,
+        r.payment_mode,
+        r.cash_amount,
+        r.qr_amount,
         r.collected_by,
       ]);
 
@@ -124,7 +130,7 @@ const SalesReport = () => {
         [],
         headerRow,
         ...dataRows,
-        ["TOTAL", "", "", "", "", "", totalCane, totalQty, "", totalAmt, ""],
+        ["TOTAL", "", "", "", "", "", totalCane, totalQty, "", totalAmt, "", "", "", ""],
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -147,6 +153,9 @@ const SalesReport = () => {
         { wch: 12 },
         { wch: 16 },
         { wch: 12 },
+        { wch: 16 },
+        { wch: 14 },
+        { wch: 14 },
         { wch: 22 },
       ];
 
