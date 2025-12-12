@@ -87,6 +87,7 @@ const SalesReport = () => {
       /* ---------- STRUCTURED EXCEL OUTPUT ---------- */
 
       const headerRow = [
+        "id",
         "Division",
         "Section",
         "Coupon No",
@@ -104,6 +105,7 @@ const SalesReport = () => {
       ];
 
       const dataRows = salesData.map((r: any) => [
+        r.id,
         r.division,
         r.section,
         r.coupon_no,
