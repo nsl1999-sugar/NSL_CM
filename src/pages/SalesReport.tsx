@@ -65,7 +65,7 @@ const SalesReport = () => {
       // Query sales_table by date range
       const { data: salesData, error } = await supabase
         .from("sales_table")
-        .select("id,division, section, coupon_no, ryot_number, ryot_name, village, cane_wt, sugar_qty, sugar_rate, amount, payment_mode, cash_amount, qr_amount, collected_by, sale_date")
+        .select("*")
         .gte("sale_date", fromDateTime.toISOString())
         .lte("sale_date", toDateTime.toISOString())
         .order("sale_date", { ascending: true });
