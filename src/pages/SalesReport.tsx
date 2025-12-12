@@ -132,7 +132,7 @@ const SalesReport = () => {
         [],
         headerRow,
         ...dataRows,
-        ["TOTAL", "", "", "", "", "", totalCane, totalQty, "", totalAmt, "", "", "", ""],
+        ["TOTAL", "", "", "", "", "","", totalCane, totalQty, "", totalAmt, "", "", "", ""],
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
