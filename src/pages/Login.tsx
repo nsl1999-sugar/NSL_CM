@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock, LogIn, AlertTriangle } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import nslLogo from "@/assets/nsl-sugars-logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { NslLogo } from "@/components/NslLogo";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -107,10 +108,13 @@ const Login = () => {
 
   return (
     <BackgroundLayout>
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <GlassCard className="w-full max-w-md p-8">
+      <div className="min-h-screen flex items-center justify-center p-4 relative">
+        <div className="absolute top-4 right-4 z-20">
+          <ThemeToggle />
+        </div>
+        <GlassCard className="w-full max-w-md p-8 relative">
           <div className="flex flex-col items-center mb-8">
-            <img src={nslLogo} alt="NSL Sugars" className="h-16 mb-4" />
+            <NslLogo className="h-16 mb-4" />
             <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
             <p className="text-muted-foreground text-sm mt-1">
               Sign in to your account

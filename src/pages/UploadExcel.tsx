@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Upload, FileUp, File, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
-import nslLogo from "@/assets/nsl-sugars-logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { NslLogo } from "@/components/NslLogo";
 
 interface FarmerRow {
   coupon_no: string;
@@ -243,16 +244,19 @@ const UploadExcel = () => {
     <BackgroundLayout>
       <div className="min-h-screen p-4 md:p-8">
         <GlassCard className="p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
 
-            <img src={nslLogo} className="h-8" />
-            <div>
-              <h1 className="text-xl font-bold">Upload Excel</h1>
-              <p className="text-sm text-muted-foreground">Upload new season data</p>
+              <NslLogo className="h-8" />
+              <div>
+                <h1 className="text-xl font-bold">Upload Excel</h1>
+                <p className="text-sm text-muted-foreground">Upload new season data</p>
+              </div>
             </div>
+            <ThemeToggle />
           </div>
         </GlassCard>
 

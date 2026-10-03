@@ -17,7 +17,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Check, CreditCard, QrCode } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import nslLogo from "@/assets/nsl-sugars-logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { NslLogo } from "@/components/NslLogo";
 
 interface FarmerEntry {
   couponNo: string;
@@ -379,15 +380,18 @@ const CollectSugar = () => {
       <div className="min-h-screen p-4 md:p-8">
         {/* Header */}
         <GlassCard className="p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <img src={nslLogo} alt="NSL Sugars" className="h-8" />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Collect Sugar</h1>
-              <p className="text-sm text-muted-foreground">Process sugar collection from Ryots</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <NslLogo className="h-8" />
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Collect Sugar</h1>
+                <p className="text-sm text-muted-foreground">Process sugar collection from Ryots</p>
+              </div>
             </div>
+            <ThemeToggle />
           </div>
         </GlassCard>
 

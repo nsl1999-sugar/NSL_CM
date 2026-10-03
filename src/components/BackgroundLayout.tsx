@@ -10,9 +10,9 @@ const BackgroundLayout = ({ children }: BackgroundLayoutProps) => {
     <div className="min-h-screen relative overflow-hidden">
       {/* Background with logo pattern */}
       <div 
-        className="fixed inset-0 z-0"
+        className="fixed inset-0 z-0 transition-colors duration-300 bg-background"
         style={{
-          background: `linear-gradient(135deg, hsl(0 72% 51% / 0.05) 0%, hsl(0 0% 95%) 50%, hsl(0 72% 51% / 0.08) 100%)`,
+          background: `linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--background)) 50%, hsl(var(--primary) / 0.08) 100%)`,
         }}
       />
       

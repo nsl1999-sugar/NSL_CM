@@ -11,14 +11,17 @@ import SalesReport from "./pages/SalesReport";
 import UploadExcel from "./pages/UploadExcel";
 import NotFound from "./pages/NotFound";
 
+import { ThemeProvider } from "@/context/ThemeContext";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route 
@@ -57,7 +60,8 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+  </ThemeProvider>
+</QueryClientProvider>
 );
 
 export default App;
